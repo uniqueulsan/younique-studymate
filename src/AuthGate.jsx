@@ -63,6 +63,7 @@ export default function AuthGate() {
     return (
       <div style={wrap}>
         <div style={card}>
+          <img src="/icon-512.png" alt="Younique Studymate" style={{ width: 56, height: 56, display: "block", marginBottom: 10 }} />
           <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>Younique Studymate</div>
           <div style={{ color: "#767A85", fontSize: 13, marginBottom: 20 }}>
             이메일로 로그인하면 내 학습 기록이 이 계정에 저장되고, 다른 기기에서도 같은 이메일로 로그인하면 이어서 볼 수 있어.

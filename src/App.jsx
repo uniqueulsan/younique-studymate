@@ -523,7 +523,7 @@ function Onboarding({ onDone }) {
   return (
     <div className="ys-onboard-wrap">
       <div className="ys-onboard-hero">
-        <div className="ys-brand-mark">YS</div>
+        <div className="ys-brand-mark"><img src="/icon-512.png" alt="Younique Studymate" /></div>
         <h1>Younique Studymate</h1>
         <p>너만의 속도, 너만의 방식 — 유니크영어 × 엠베스트유곡의 학습 파트너</p>
       </div>
@@ -2055,7 +2055,7 @@ ${actualLogTxt}
       {showDiagModal && <DiagnosisModal onClose={() => setShowDiagModal(false)} onSave={handleDiagSave} />}
 
       <header className="ys-header">
-        <div className="ys-brand-mark sm">YS</div>
+        <div className="ys-brand-mark sm"><img src="/icon-512.png" alt="Younique Studymate" /></div>
         <div className="ys-header-title">
           <div className="ys-header-name">Younique Studymate</div>
           <div className="ys-header-sub">{profile.name}{profile.school ? ` · ${profile.school}` : ""} · {profile.grade}</div>
@@ -2208,12 +2208,13 @@ function GlobalStyle() {
       .ys-spin{ animation:ys-spin 1s linear infinite; }
       @keyframes ys-spin{ to{ transform:rotate(360deg); } }
 
-      .ys-brand-mark{ width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,var(--navy),#3A4270); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:16px; flex-shrink:0; }
-      .ys-brand-mark.sm{ width:34px; height:34px; font-size:13px; border-radius:9px; }
+      .ys-brand-mark{ width:44px; height:44px; border-radius:12px; background:#fff; border:1px solid var(--card-bd); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; padding:4px; }
+      .ys-brand-mark img{ width:100%; height:100%; object-fit:contain; }
+      .ys-brand-mark.sm{ width:34px; height:34px; border-radius:9px; padding:3px; }
 
       .ys-onboard-wrap{ padding:28px 18px; }
       .ys-onboard-hero{ text-align:center; margin-bottom:22px; }
-      .ys-onboard-hero .ys-brand-mark{ margin:0 auto 12px; width:56px; height:56px; font-size:20px; border-radius:16px; }
+      .ys-onboard-hero .ys-brand-mark{ margin:0 auto 12px; width:64px; height:64px; border-radius:16px; padding:6px; }
       .ys-onboard-hero h1{ font-family:var(--font-display); font-size:26px; margin:0 0 6px; }
       .ys-onboard-hero p{ color:var(--ink-soft); font-size:13.5px; margin:0; }
       .ys-onboard-card h2{ font-family:var(--font-display); font-size:19px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
