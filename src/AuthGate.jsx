@@ -28,6 +28,7 @@ export default function AuthGate() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -55,6 +56,20 @@ export default function AuthGate() {
     else setSent(true);
   };
 
+  const signInWithKakao = async () => {
+    setError(null);
+    setKakaoLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "kakao",
+      options: { redirectTo: window.location.origin },
+    });
+    // 성공하면 카카오 로그인 페이지로 브라우저가 이동하기 때문에 이 아래 코드는 보통 실행되지 않음
+    if (error) {
+      setError(error.message);
+      setKakaoLoading(false);
+    }
+  };
+
   if (session === undefined) {
     return <div style={wrap}>불러오는 중...</div>;
   }
@@ -66,8 +81,40 @@ export default function AuthGate() {
           <img src="/icon-512.png" alt="Younique Studymate" style={{ width: 56, height: 56, display: "block", marginBottom: 10 }} />
           <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>Younique Studymate</div>
           <div style={{ color: "#767A85", fontSize: 13, marginBottom: 20 }}>
-            이메일로 로그인하면 내 학습 기록이 이 계정에 저장되고, 다른 기기에서도 같은 이메일로 로그인하면 이어서 볼 수 있어.
+            로그인하면 내 학습 기록이 이 계정에 저장되고, 다른 기기에서도 같은 계정으로 로그인하면 이어서 볼 수 있어.
           </div>
+
+          <button
+            onClick={signInWithKakao}
+            disabled={kakaoLoading}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "11px 0",
+              borderRadius: 10,
+              border: "none",
+              background: "#FEE500",
+              color: "#191919",
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              marginBottom: 16,
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1 }}>💬</span>
+            {kakaoLoading ? "이동하는 중..." : "카카오로 3초만에 시작하기"}
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 16px" }}>
+            <div style={{ flex: 1, height: 1, background: "#E7E2D6" }} />
+            <span style={{ fontSize: 11, color: "#9AA0AE" }}>또는 이메일로 로그인</span>
+            <div style={{ flex: 1, height: 1, background: "#E7E2D6" }} />
+          </div>
+
           {sent ? (
             <div style={{ fontSize: 14, lineHeight: 1.6 }}>
               <b>{email}</b>로 로그인 링크를 보냈어요. 메일함(스팸함도 확인!)에서 링크를 눌러줘.
@@ -97,9 +144,9 @@ export default function AuthGate() {
                   width: "100%",
                   padding: "11px 0",
                   borderRadius: 10,
-                  border: "none",
-                  background: "#1B1F3B",
-                  color: "#fff",
+                  border: "1.5px solid #1B1F3B",
+                  background: "#fff",
+                  color: "#1B1F3B",
                   fontWeight: 600,
                   fontSize: 14,
                   cursor: "pointer",
@@ -107,9 +154,9 @@ export default function AuthGate() {
               >
                 {sending ? "보내는 중..." : "로그인 링크 받기"}
               </button>
-              {error && <div style={{ color: "#E8615A", fontSize: 12, marginTop: 8 }}>{error}</div>}
             </form>
           )}
+          {error && <div style={{ color: "#E8615A", fontSize: 12, marginTop: 10 }}>{error}</div>}
         </div>
       </div>
     );
