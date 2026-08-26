@@ -211,5 +211,5 @@ export default function AuthGate() {
     );
   }
 
-  return <App />;
+  return <App onLogout={() => supabase.auth.signOut()} />;
 }

@@ -3,7 +3,7 @@ import {
   BookOpen, Calendar, CheckCircle2, Circle, TrendingUp, AlertTriangle,
   Sparkles, Coffee, User, Settings2, ChevronRight, ChevronLeft, Plus,
   Trash2, RefreshCw, Star, Trophy, Clock, X, Loader2, Flame, Target,
-  BarChart3, BookMarked, Sunrise
+  BarChart3, BookMarked, Sunrise, LogOut
 } from "lucide-react";
 
 /* ============================== 상수 & 데이터 ============================== */
@@ -682,6 +682,7 @@ function SubjectsManager({ subjects, setSubjects }) {
   };
   const removeSubject = (id) => setSubjects(subjects.filter((s) => s.id !== id));
   const toggleWeak = (id) => setSubjects(subjects.map((s) => s.id === id ? { ...s, selfWeak: !s.selfWeak } : s));
+  const updateSubject = (id, patch) => setSubjects(subjects.map((s) => s.id === id ? { ...s, ...patch } : s));
 
   const addUnit = (sid) => {
     const title = (unitDraft[sid] || "").trim();
@@ -690,6 +691,9 @@ function SubjectsManager({ subjects, setSubjects }) {
     setUnitDraft({ ...unitDraft, [sid]: "" });
   };
   const removeUnit = (sid, uidUnit) => setSubjects(subjects.map((s) => s.id === sid ? { ...s, units: s.units.filter((u) => u.id !== uidUnit) } : s));
+  const updateUnitTitle = (sid, unitId, title) => setSubjects(subjects.map((s) => s.id !== sid ? s : {
+    ...s, units: s.units.map((u) => u.id !== unitId ? u : { ...u, title })
+  }));
 
   const addSubtopic = (sid, unitId) => {
     const key = sid + unitId;
@@ -702,6 +706,9 @@ function SubjectsManager({ subjects, setSubjects }) {
   };
   const removeSubtopic = (sid, unitId, stId) => setSubjects(subjects.map((s) => s.id !== sid ? s : {
     ...s, units: s.units.map((u) => u.id !== unitId ? u : { ...u, subtopics: u.subtopics.filter((st) => st.id !== stId) })
+  }));
+  const updateSubtopicTitle = (sid, unitId, stId, title) => setSubjects(subjects.map((s) => s.id !== sid ? s : {
+    ...s, units: s.units.map((u) => u.id !== unitId ? u : { ...u, subtopics: u.subtopics.map((st) => st.id !== stId ? st : { ...st, title }) })
   }));
 
   const addUnitWithSubs = (sid, unitTitle, subtopicTitles) => {
@@ -729,9 +736,15 @@ function SubjectsManager({ subjects, setSubjects }) {
         return (
           <Card key={s.id}>
             <div className="ys-subj-head">
-              <div>
-                <h3>{s.name} {s.selfWeak && <span className="ys-badge weak">취약</span>}</h3>
-                <div className="ys-muted sm">{s.textbook || "교재 미입력"} · {doneSt}/{totalSt} 소제목 완료</div>
+              <div style={{ flex: 1 }}>
+                <div className="ys-edit-row">
+                  <input className="ys-edit-title" value={s.name} onChange={(e) => updateSubject(s.id, { name: e.target.value })} placeholder="과목명" />
+                  {s.selfWeak && <span className="ys-badge weak">취약</span>}
+                </div>
+                <div className="ys-edit-row sm">
+                  <input className="ys-edit-sub" value={s.textbook || ""} onChange={(e) => updateSubject(s.id, { textbook: e.target.value })} placeholder="교재 미입력" />
+                  <span className="ys-muted sm">· {doneSt}/{totalSt} 소제목 완료</span>
+                </div>
               </div>
               <div className="ys-row-btns">
                 <button className="ys-btn-ghost sm" onClick={() => toggleWeak(s.id)}>{s.selfWeak ? "취약 해제" : "취약 표시"}</button>
@@ -741,17 +754,19 @@ function SubjectsManager({ subjects, setSubjects }) {
 
             {s.units.map((u) => (
               <div key={u.id} className="ys-unit-block">
-                <div className="ys-unit-head" onClick={() => setOpenUnit({ ...openUnit, [u.id]: !openUnit[u.id] })}>
-                  <ChevronRight size={14} style={{ transform: openUnit[u.id] ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
-                  <span>{u.title}</span>
+                <div className="ys-unit-head">
+                  <button className="ys-unit-expand" onClick={() => setOpenUnit({ ...openUnit, [u.id]: !openUnit[u.id] })}>
+                    <ChevronRight size={14} style={{ transform: openUnit[u.id] ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
+                  </button>
+                  <input className="ys-edit-unit" value={u.title} onChange={(e) => updateUnitTitle(s.id, u.id, e.target.value)} placeholder="단원명" />
                   <span className="ys-muted sm">{u.subtopics.filter(x=>x.done).length}/{u.subtopics.length}</span>
-                  <button className="ys-icon-btn danger" onClick={(e) => { e.stopPropagation(); removeUnit(s.id, u.id); }}><Trash2 size={13} /></button>
+                  <button className="ys-icon-btn danger" onClick={() => removeUnit(s.id, u.id)}><Trash2 size={13} /></button>
                 </div>
                 {openUnit[u.id] && (
                   <div className="ys-subtopic-list">
                     {u.subtopics.map((st) => (
                       <div key={st.id} className="ys-subtopic-row">
-                        <span>{st.title}</span>
+                        <input className="ys-edit-subtopic" value={st.title} onChange={(e) => updateSubtopicTitle(s.id, u.id, st.id, e.target.value)} placeholder="소제목" />
                         {st.avgRating != null && <span className={`ys-badge ${st.avgRating < 3 ? "weak" : "ok"}`}>이해도 {st.avgRating.toFixed(1)}</span>}
                         <button className="ys-icon-btn danger" onClick={() => removeSubtopic(s.id, u.id, st.id)}><Trash2 size={12} /></button>
                       </div>
@@ -834,6 +849,8 @@ function ExamManager({ subjects, exams, setExams }) {
   };
   const remove = (id) => setExams(exams.filter((e) => e.id !== id));
   const setScope = (examId, ids) => setExams(exams.map((e) => e.id === examId ? { ...e, scopeSubtopicIds: ids } : e));
+  const updateExam = (examId, patch) => setExams(exams.map((e) => e.id === examId ? { ...e, ...patch } : e));
+  const changeExamSubject = (examId, subjectId) => setExams(exams.map((e) => e.id === examId ? { ...e, subjectId, scopeSubtopicIds: [] } : e));
   const sorted = [...exams].sort((a, b) => a.date.localeCompare(b.date));
 
   return (
@@ -859,9 +876,15 @@ function ExamManager({ subjects, exams, setExams }) {
         return (
           <Card key={e.id}>
             <div className="ys-exam-row">
-              <div>
-                <b>{subj?.name || "삭제된 과목"}</b>
-                <div className="ys-muted sm">{fmtKor(e.date)} {e.time && `· ${e.time}`}</div>
+              <div className="ys-exam-edit-fields">
+                <select className="ys-edit-examsubj" value={e.subjectId} onChange={(ev) => changeExamSubject(e.id, ev.target.value)}>
+                  {!subj && <option value="">삭제된 과목</option>}
+                  {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <div className="ys-row-inputs sm" style={{ marginTop: 6 }}>
+                  <input type="date" value={e.date} onChange={(ev) => updateExam(e.id, { date: ev.target.value })} />
+                  <input type="time" value={e.time || ""} onChange={(ev) => updateExam(e.id, { time: ev.target.value })} />
+                </div>
               </div>
               <div className="ys-row-btns">
                 <span className={`ys-badge ${dleft <= 3 ? "weak" : "ok"}`}>D-{dleft >= 0 ? dleft : "완료"}</span>
@@ -1717,7 +1740,7 @@ function ReportView({ date, review, subjects, plan, progress, backlog, exams, on
 
 /* ============================== 메인 앱 ============================== */
 
-export default function App() {
+export default function App({ onLogout }) {
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState("dashboard");
   const [profile, setProfile] = useState(null);
@@ -1731,6 +1754,7 @@ export default function App() {
   const [dailyMeta, setDailyMeta] = useState({});
   const [reviews, setReviews] = useState({});
   const [showDiagModal, setShowDiagModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const [finishing, setFinishing] = useState(false);
   const [planPreviews, setPlanPreviews] = useState(null); // {cycle, mix}
@@ -2053,6 +2077,21 @@ ${actualLogTxt}
     <div className="ys-root">
       <GlobalStyle />
       {showDiagModal && <DiagnosisModal onClose={() => setShowDiagModal(false)} onSave={handleDiagSave} />}
+      {showLogoutConfirm && (
+        <div className="ys-modal-bg" onClick={() => setShowLogoutConfirm(false)}>
+          <div className="ys-logout-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="ys-logout-icon"><LogOut size={20} color="var(--coral)" /></div>
+            <div className="ys-logout-title">로그아웃 할까?</div>
+            <div className="ys-muted sm" style={{ marginBottom: 16 }}>기록은 이 계정에 그대로 저장돼 있어서, 다음에 같은 아이디로 로그인하면 이어서 볼 수 있어.</div>
+            <div className="ys-row-btns">
+              <button className="ys-btn-ghost" onClick={() => setShowLogoutConfirm(false)}>취소</button>
+              <button className="ys-btn-primary" style={{ background: "var(--coral)" }} onClick={() => { setShowLogoutConfirm(false); onLogout && onLogout(); }}>
+                <LogOut size={15} /> 로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="ys-header">
         <div className="ys-brand-mark sm"><img src="/icon-512.png" alt="Younique Studymate" /></div>
@@ -2061,6 +2100,7 @@ ${actualLogTxt}
           <div className="ys-header-sub">{profile.name}{profile.school ? ` · ${profile.school}` : ""} · {profile.grade}</div>
         </div>
         <button className="ys-icon-btn" onClick={() => setShowDiagModal(true)} title="재진단"><Settings2 size={17} /></button>
+        {onLogout && <button className="ys-icon-btn" onClick={() => setShowLogoutConfirm(true)} title="로그아웃"><LogOut size={17} /></button>}
       </header>
 
       <nav className="ys-nav">
@@ -2250,6 +2290,9 @@ function GlobalStyle() {
       .ys-tag{ font-size:11px; background:var(--cream); border-radius:6px; padding:3px 7px; font-weight:500; margin-left:6px; vertical-align:middle; }
 
       .ys-modal-bg{ position:fixed; inset:0; background:rgba(20,22,35,.5); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
+      .ys-logout-confirm{ background:#fff; border-radius:18px; max-width:320px; width:100%; padding:24px 22px; text-align:center; }
+      .ys-logout-icon{ width:44px; height:44px; border-radius:50%; background:#FDEDEA; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+      .ys-logout-title{ font-family:var(--font-display); font-weight:700; font-size:17px; margin-bottom:6px; }
       .ys-modal{ background:#fff; border-radius:18px; max-width:520px; width:100%; max-height:85vh; overflow:auto; }
       .ys-modal-head{ display:flex; justify-content:space-between; align-items:center; padding:16px 18px; border-bottom:1px solid var(--card-bd); position:sticky; top:0; background:#fff; }
       .ys-modal-head h2{ font-family:var(--font-display); font-size:18px; margin:0; }
@@ -2303,13 +2346,28 @@ function GlobalStyle() {
       .ys-badge.final{ background:#F0E5FF; color:#7C4DC4; }
 
       .ys-unit-block{ border-top:1px solid var(--card-bd); padding-top:8px; margin-top:8px; }
-      .ys-unit-head{ display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13.5px; font-weight:600; padding:4px 0; }
-      .ys-unit-head span:nth-child(2){ flex:1; }
+      .ys-unit-head{ display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; padding:4px 0; }
       .ys-subtopic-list{ padding-left:20px; margin-top:6px; display:flex; flex-direction:column; gap:6px; }
       .ys-subtopic-row{ display:flex; align-items:center; gap:8px; font-size:12.5px; }
       .ys-subtopic-row span:first-child{ flex:1; }
 
-      .ys-exam-row{ display:flex; justify-content:space-between; align-items:center; }
+      .ys-exam-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+      .ys-exam-edit-fields{ flex:1; min-width:0; }
+      .ys-edit-examsubj{ font-weight:700; font-size:14px; border:none; background:transparent; padding:2px 0; border-bottom:1.5px dashed transparent; font-family:var(--font-body); }
+      .ys-edit-examsubj:hover, .ys-edit-examsubj:focus{ border-bottom-color:var(--card-bd); outline:none; }
+      .ys-exam-edit-fields input[type="date"], .ys-exam-edit-fields input[type="time"]{ font-size:12.5px; padding:6px 8px; }
+
+      /* 인라인 편집 가능한 텍스트 필드 (과목명/교재/단원/소제목) */
+      .ys-edit-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+      .ys-edit-title{ font-family:var(--font-display); font-weight:700; font-size:15.5px; border:none; background:transparent; padding:2px 4px; border-radius:6px; color:var(--ink); min-width:60px; flex:0 1 auto; }
+      .ys-edit-title:hover, .ys-edit-title:focus{ background:var(--cream); outline:none; }
+      .ys-edit-sub{ font-size:12px; color:var(--ink-soft); border:none; background:transparent; padding:2px 4px; border-radius:6px; min-width:60px; flex:0 1 auto; }
+      .ys-edit-sub:hover, .ys-edit-sub:focus{ background:var(--cream); outline:none; color:var(--ink); }
+      .ys-unit-expand{ background:none; border:none; cursor:pointer; padding:2px; display:flex; align-items:center; color:var(--ink-soft); flex-shrink:0; }
+      .ys-edit-unit{ flex:1; font-size:13.5px; font-weight:600; border:none; background:transparent; padding:3px 5px; border-radius:6px; color:var(--ink); min-width:40px; }
+      .ys-edit-unit:hover, .ys-edit-unit:focus{ background:var(--cream); outline:none; }
+      .ys-edit-subtopic{ flex:1; font-size:12.5px; border:none; background:transparent; padding:3px 5px; border-radius:6px; color:var(--ink); min-width:40px; }
+      .ys-edit-subtopic:hover, .ys-edit-subtopic:focus{ background:var(--cream); outline:none; }
 
       .ys-date-nav{ display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:2px; }
       .ys-date-label{ font-family:var(--font-display); font-size:15.5px; display:flex; align-items:center; gap:6px; }
