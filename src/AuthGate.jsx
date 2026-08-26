@@ -21,14 +21,49 @@ const card = {
   boxShadow: "0 2px 12px rgba(0,0,0,.06)",
   border: "1px solid #E7E2D6",
 };
+const inputStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1.5px solid #E7E2D6",
+  fontSize: 14,
+  marginBottom: 10,
+};
+const primaryBtn = {
+  width: "100%",
+  padding: "11px 0",
+  borderRadius: 10,
+  border: "none",
+  background: "#1B1F3B",
+  color: "#fff",
+  fontWeight: 600,
+  fontSize: 14,
+  cursor: "pointer",
+};
+
+// 아이디를 Supabase가 요구하는 이메일 형식으로 변환 (실제 이메일이 아니라 내부용 가짜 도메인)
+const ID_DOMAIN = "@studymate.local";
+const toInternalEmail = (id) => `${id.trim().toLowerCase()}${ID_DOMAIN}`;
+
+function friendlyError(msg) {
+  if (!msg) return "";
+  if (msg.includes("Invalid login credentials")) return "아이디 또는 비밀번호가 올바르지 않아요.";
+  if (msg.includes("already registered") || msg.includes("already exists")) return "이미 있는 아이디예요. 로그인을 눌러줘.";
+  if (msg.includes("Password should be at least")) return "비밀번호는 6자 이상이어야 해요.";
+  if (msg.includes("Unable to validate email")) return "아이디에 특수문자나 공백은 쓸 수 없어요. 영문/숫자로만 만들어줘.";
+  return msg;
+}
 
 export default function AuthGate() {
   const [session, setSession] = useState(undefined); // undefined = 로딩중
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [error, setError] = useState(null);
-  const [sending, setSending] = useState(false);
-  const [kakaoLoading, setKakaoLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [signupDone, setSignupDone] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -43,31 +78,46 @@ export default function AuthGate() {
     }
   }, [session]);
 
-  const sendMagicLink = async (e) => {
+  const idValid = /^[a-zA-Z0-9_]{3,20}$/.test(userId.trim());
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    setSending(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    });
-    setSending(false);
-    if (error) setError(error.message);
-    else setSent(true);
+
+    if (!idValid) {
+      setError("아이디는 영문/숫자/밑줄(_)로 3~20자로 만들어줘.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("비밀번호는 6자 이상으로 만들어줘.");
+      return;
+    }
+    if (mode === "signup" && password !== password2) {
+      setError("비밀번호가 서로 달라. 다시 확인해줘.");
+      return;
+    }
+
+    setLoading(true);
+    const email = toInternalEmail(userId);
+
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      setLoading(false);
+      if (error) setError(friendlyError(error.message));
+      else setSignupDone(true);
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(false);
+      if (error) setError(friendlyError(error.message));
+    }
   };
 
-  const signInWithKakao = async () => {
+  const switchMode = (m) => {
+    setMode(m);
     setError(null);
-    setKakaoLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "kakao",
-      options: { redirectTo: window.location.origin },
-    });
-    // 성공하면 카카오 로그인 페이지로 브라우저가 이동하기 때문에 이 아래 코드는 보통 실행되지 않음
-    if (error) {
-      setError(error.message);
-      setKakaoLoading(false);
-    }
+    setSignupDone(false);
+    setPassword("");
+    setPassword2("");
   };
 
   if (session === undefined) {
@@ -80,83 +130,82 @@ export default function AuthGate() {
         <div style={card}>
           <img src="/icon-512.png" alt="Younique Studymate" style={{ width: 56, height: 56, display: "block", marginBottom: 10 }} />
           <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>Younique Studymate</div>
-          <div style={{ color: "#767A85", fontSize: 13, marginBottom: 20 }}>
-            로그인하면 내 학습 기록이 이 계정에 저장되고, 다른 기기에서도 같은 계정으로 로그인하면 이어서 볼 수 있어.
+          <div style={{ color: "#767A85", fontSize: 13, marginBottom: 18 }}>
+            아이디와 비밀번호로 로그인하면 내 학습 기록이 저장되고, 다른 기기에서도 같은 아이디로 로그인하면 이어서 볼 수 있어.
           </div>
 
-          <button
-            onClick={signInWithKakao}
-            disabled={kakaoLoading}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "11px 0",
-              borderRadius: 10,
-              border: "none",
-              background: "#FEE500",
-              color: "#191919",
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              marginBottom: 16,
-            }}
-          >
-            <span style={{ fontSize: 16, lineHeight: 1 }}>💬</span>
-            {kakaoLoading ? "이동하는 중..." : "카카오로 3초만에 시작하기"}
-          </button>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 16px" }}>
-            <div style={{ flex: 1, height: 1, background: "#E7E2D6" }} />
-            <span style={{ fontSize: 11, color: "#9AA0AE" }}>또는 이메일로 로그인</span>
-            <div style={{ flex: 1, height: 1, background: "#E7E2D6" }} />
+          <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "#F3F1EA", borderRadius: 10, padding: 4 }}>
+            <button
+              onClick={() => switchMode("login")}
+              style={{
+                flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer",
+                background: mode === "login" ? "#fff" : "transparent",
+                fontWeight: 600, fontSize: 13, color: mode === "login" ? "#1B1F3B" : "#9AA0AE",
+                boxShadow: mode === "login" ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+              }}
+            >
+              로그인
+            </button>
+            <button
+              onClick={() => switchMode("signup")}
+              style={{
+                flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer",
+                background: mode === "signup" ? "#fff" : "transparent",
+                fontWeight: 600, fontSize: 13, color: mode === "signup" ? "#1B1F3B" : "#9AA0AE",
+                boxShadow: mode === "signup" ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+              }}
+            >
+              회원가입
+            </button>
           </div>
 
-          {sent ? (
+          {signupDone ? (
             <div style={{ fontSize: 14, lineHeight: 1.6 }}>
-              <b>{email}</b>로 로그인 링크를 보냈어요. 메일함(스팸함도 확인!)에서 링크를 눌러줘.
+              가입이 완료됐어! <b>{userId}</b> 아이디로 이제 로그인해줘.
+              <button style={{ ...primaryBtn, marginTop: 14 }} onClick={() => switchMode("login")}>로그인하러 가기</button>
             </div>
           ) : (
-            <form onSubmit={sendMagicLink}>
+            <form onSubmit={handleSubmit}>
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="이메일 주소"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1.5px solid #E7E2D6",
-                  fontSize: 14,
-                  marginBottom: 10,
-                }}
+                placeholder="아이디 (영문/숫자, 3~20자)"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                style={inputStyle}
+                autoCapitalize="off"
+                autoCorrect="off"
               />
-              <button
-                type="submit"
-                disabled={sending}
-                style={{
-                  width: "100%",
-                  padding: "11px 0",
-                  borderRadius: 10,
-                  border: "1.5px solid #1B1F3B",
-                  background: "#fff",
-                  color: "#1B1F3B",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                {sending ? "보내는 중..." : "로그인 링크 받기"}
+              <input
+                type="password"
+                required
+                placeholder="비밀번호 (6자 이상)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={inputStyle}
+              />
+              {mode === "signup" && (
+                <input
+                  type="password"
+                  required
+                  placeholder="비밀번호 확인"
+                  value={password2}
+                  onChange={(e) => setPassword2(e.target.value)}
+                  style={inputStyle}
+                />
+              )}
+              <button type="submit" disabled={loading} style={primaryBtn}>
+                {loading ? "처리 중..." : mode === "signup" ? "가입하기" : "로그인"}
               </button>
+              {error && <div style={{ color: "#E8615A", fontSize: 12, marginTop: 10 }}>{error}</div>}
             </form>
           )}
-          {error && <div style={{ color: "#E8615A", fontSize: 12, marginTop: 10 }}>{error}</div>}
+
+          {mode === "login" && !signupDone && (
+            <div style={{ fontSize: 11, color: "#9AA0AE", marginTop: 14, lineHeight: 1.5 }}>
+              비밀번호를 잊어버렸다면 선생님께 문의해줘.
+            </div>
+          )}
         </div>
       </div>
     );
