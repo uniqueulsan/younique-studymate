@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Younique Studymate · 관리자</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
+<style>
+  :root{
+    --navy:#1B1F3B; --amber:#F2A93B; --mint:#4FAE7C; --coral:#E8615A;
+    --ink:#20242B; --ink-soft:#6B7080; --cream:#FBF8F3; --bd:#E7E2D6;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Pretendard',-apple-system,sans-serif; background:var(--cream); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .card{ background:#fff; border:1px solid var(--bd); border-radius:20px; padding:28px; max-width:400px; width:100%; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+  .badge{ display:inline-block; font-size:11px; font-weight:700; color:var(--coral); background:#FDEDEA; padding:3px 10px; border-radius:20px; margin-bottom:10px; }
+  h1{ font-size:19px; margin:0 0 4px; color:var(--ink); }
+  .sub{ font-size:12.5px; color:var(--ink-soft); margin-bottom:20px; line-height:1.5; }
+  label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink); margin:14px 0 6px; }
+  input{ width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--bd); font-size:14px; font-family:inherit; }
+  input:focus{ outline:none; border-color:var(--amber); }
+  .row{ display:flex; gap:8px; }
+  .row input{ flex:1; }
+  .ghost-btn{ padding:10px 12px; border-radius:10px; border:1.5px solid var(--bd); background:#fff; font-size:12.5px; font-weight:600; color:var(--ink); cursor:pointer; white-space:nowrap; }
+  .primary-btn{ width:100%; margin-top:20px; padding:12px 0; border-radius:10px; border:none; background:var(--navy); color:#fff; font-weight:700; font-size:14px; cursor:pointer; }
+  .primary-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .result{ margin-top:16px; padding:12px 14px; border-radius:10px; font-size:13px; line-height:1.6; display:none; }
+  .result.ok{ background:#EFFAF3; border:1px solid #BFE6CC; color:#256B44; display:block; }
+  .result.err{ background:#FDEDEA; border:1px solid #F3C6BE; color:#A5352A; display:block; }
+  .hint{ font-size:11px; color:var(--ink-soft); margin-top:4px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">관리자 전용</div>
+    <h1>학생 비밀번호 재설정</h1>
+    <div class="sub">학생이 비밀번호를 잊어버렸다고 문의하면, 여기서 아이디만 확인하고 새 비밀번호를 만들어서 알려주면 돼요.</div>
+
+    <label>관리자 비밀번호</label>
+    <input id="adminSecret" type="password" placeholder="관리자 비밀번호 입력" autocomplete="off" />
+
+    <label>학생 아이디</label>
+    <input id="studentId" type="text" placeholder="예: minjun2025" autocomplete="off" autocapitalize="off" />
+
+    <label>새 비밀번호</label>
+    <div class="row">
+      <input id="newPassword" type="text" placeholder="새 비밀번호 (6자 이상)" autocomplete="off" />
+      <button class="ghost-btn" id="genBtn" type="button">랜덤 생성</button>
+    </div>
+    <div class="hint">'랜덤 생성'을 누르면 학생에게 전화나 문자로 불러주기 쉬운 숫자 6자리로 만들어줘요.</div>
+
+    <button class="primary-btn" id="submitBtn">비밀번호 재설정</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    $('genBtn').addEventListener('click', () => {
+      const n = Math.floor(100000 + Math.random() * 900000);
+      $('newPassword').value = String(n);
+    });
+
+    $('submitBtn').addEventListener('click', async () => {
+      const adminSecret = $('adminSecret').value;
+      const studentId = $('studentId').value.trim();
+      const newPassword = $('newPassword').value;
+      const resultEl = $('result');
+      const btn = $('submitBtn');
+
+      resultEl.className = 'result';
+      resultEl.textContent = '';
+
+      if (!adminSecret || !studentId || !newPassword) {
+        resultEl.className = 'result err';
+        resultEl.textContent = '모든 칸을 입력해줘.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '처리 중...';
+
+      try {
+        const res = await fetch('/api/admin-reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminSecret, studentId, newPassword }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          resultEl.className = 'result ok';
+          resultEl.textContent = `완료! '${data.studentId}' 학생의 새 비밀번호는 "${newPassword}" 이에요. 이 비밀번호를 학생에게 알려주세요.`;
+        } else {
+          resultEl.className = 'result err';
+          resultEl.textContent = data.error || '알 수 없는 오류가 발생했어요.';
+        }
+      } catch (e) {
+        resultEl.className = 'result err';
+        resultEl.textContent = '서버에 연결하지 못했어요. 잠시 후 다시 시도해줘.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '비밀번호 재설정';
+      }
+    });
+  </script>
+</body>
+</html>

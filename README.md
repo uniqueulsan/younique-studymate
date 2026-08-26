@@ -57,6 +57,8 @@ AI가 매일 자동으로 새로운 코멘트/이야기를 생성해주는 기�
    - `VITE_SUPABASE_URL` = (1단계에서 복사한 값)
    - `VITE_SUPABASE_ANON_KEY` = (1단계에서 복사한 값)
    - `ANTHROPIC_API_KEY` = (2단계에서 만든 키, 선택사항 — 이건 서버 함수에서만 쓰여서 안전해요)
+   - `SUPABASE_SERVICE_ROLE_KEY` = Supabase **Settings → API → service_role** 키 (학생 비밀번호 재설정 도구용, 아래 "비밀번호 문의 대응" 참고)
+   - `ADMIN_SECRET` = 직접 정하는 관리자 비밀번호 (예: 학원에서만 아는 문구)
 5. **Save and Deploy** 클릭 → 1~2분 후 `https://프로젝트이름.pages.dev` 링크 완성
 
 > ⚠️ `VITE_`로 시작하는 값은 빌드할 때 코드에 새겨지는 값이라, 나중에 값을 바꾸면 **재배포(Retry deployment)**를 한 번 눌러줘야 반영돼요.
@@ -81,6 +83,23 @@ wrangler pages secret put ANTHROPIC_API_KEY --project-name=younique-studymate
 
 ### (참고) Vercel을 쓰고 싶다면
 프로젝트 루트의 `api/claude.js`가 Vercel용으로 이미 준비돼 있어요. Vercel 대시보드에서 이 저장소를 Import하고 같은 환경변수 3개(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`)만 등록하면 동일하게 동작해요.
+
+---
+
+## 비밀번호 문의 대응 (관리자 페이지)
+
+학생이 비밀번호를 잊어버렸다고 하면, `https://youn의-사이트-주소.pages.dev/admin.html` 로 접속하세요. (학생들에게는 이 주소를 알려주지 마세요.)
+
+**사용법**
+1. 관리자 비밀번호 칸에 위에서 등록한 `ADMIN_SECRET` 값 입력
+2. 학생 아이디 입력
+3. "랜덤 생성" 버튼을 누르면 전화로 불러주기 쉬운 숫자 6자리가 자동으로 만들어져요 (직접 원하는 비밀번호를 입력해도 돼요)
+4. **비밀번호 재설정** 클릭 → 성공 메시지에 뜨는 새 비밀번호를 학생에게 알려주면 끝
+
+**꼭 확인해주세요**
+- `SUPABASE_SERVICE_ROLE_KEY`는 Supabase의 모든 데이터에 접근할 수 있는 매우 민감한 값이에요. 반드시 Cloudflare Pages의 환경변수로만 등록하고(앞에 `VITE_`를 붙이면 절대 안 돼요), 다른 사람에게 공유하거나 코드에 직접 적지 마세요.
+- `admin.html`은 검색엔진에 노출되지 않도록 처리해뒀지만(`noindex`), 주소 자체를 아는 사람은 누구나 접속할 수 있으니 관리자 비밀번호를 충분히 복잡하게 정해주세요.
+- 안전하게 하려면 이 파일을 배포 후 주소를 아무에게도 공유하지 말고, 담당 선생님끼리만 북마크해두는 걸 추천해요.
 
 ---
 
